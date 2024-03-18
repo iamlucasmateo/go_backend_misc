@@ -18,3 +18,6 @@ generate_sql:
 
 migrate_down:
 	migrate -path db/migration -database "postgresql://root:secret@localhost:54321/simple_bank?sslmode=disable" --verbose down
+
+test:
+	go test -v -cover ./...

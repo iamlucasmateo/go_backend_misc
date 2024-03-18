@@ -12,3 +12,6 @@ Simple bank backend with a variety of backend technologies, written in Go
 
 - `migrate create -ext sql -dir <folder_name, e.g. db/migration> -seq <migration_name>`
 - `migrate -path db/migration -database "postgresql://root:secret@localhost:54321/simple_bank?sslmode=disable" --verbose up`
+
+## DB tests
+- `go get github.com/lib/pq` to get package `lib/pq`
