@@ -17,7 +17,10 @@ Simple bank backend with a variety of backend technologies, written in Go
 - `go get github.com/lib/pq` to get package `lib/pq`
 
 ## Transaction in postgresql
-- Uses `FOR NO KEY UPDATE` to prevent concurrent issues + deadlock
+- Uses `FOR NO KEY UPDATE` to prevent concurrency + deadlock issues:
+    - `FOR UPDATE` will create a lock in `SELECT` until and `UPDATE` occurs in the transacion
+    - Deadlock (`NO KEY` prevents a deadlock between an `INSERT` and the concurrent `SELECT FOR UPDATE`)
+    - Order is important: if the two same accounts are updated concurrently, make sure they are updated in the same order (to prevent a situation where `processA` locks `account1`, `processB` locks `account2`, and then `processA` cannot access `account2` and viceversa)
 - In order to debug concurrent DB transactions, some useful queries ((postgres wiki)[https://wiki.postgresql.org/wiki/Lock_Monitoring]):
 ```
 SELECT blocked_locks.pid     AS blocked_pid,
