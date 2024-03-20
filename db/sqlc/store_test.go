@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,13 +41,6 @@ func runTransferTxTests(
 
 	_, err = store.GetEntry(context.Background(), fromEntry.ID)
 	require.NoError(t, err)
-
-	dbAccountFrom, err := store.GetAccount(context.Background(), fromAccount.ID)
-	require.NoError(t, err)
-	dbAccountTo, err := store.GetAccount(context.Background(), toAccount.ID)
-	require.NoError(t, err)
-	require.Equal(t, fromAccount.Balance-amount, dbAccountFrom.Balance)
-	require.Equal(t, toAccount.Balance+amount, dbAccountTo.Balance)
 }
 
 func TestTransferTx(t *testing.T) {
@@ -69,18 +63,25 @@ func TestTransferTx(t *testing.T) {
 	})
 
 	runTransferTxTests(t, err, &fromAccountTest, &toAccountTest, result, amount, store)
+
+	dbAccountFrom, err := store.GetAccount(context.Background(), fromAccountTest.ID)
+	require.NoError(t, err)
+	dbAccountTo, err := store.GetAccount(context.Background(), toAccountTest.ID)
+	require.NoError(t, err)
+	require.Equal(t, fromAccountTest.Balance-amount, dbAccountFrom.Balance)
+	require.Equal(t, toAccountTest.Balance+amount, dbAccountTo.Balance)
 }
 
-func NoTestTransferTxConcurrent(t *testing.T) {
+func TestTransferTxConcurrent(t *testing.T) {
 	store := NewStore(testDB)
-	testAccount1, _, _ := createRandomAccount(t, "_test_transfer_tx_1")
-	testAccount2, _, _ := createRandomAccount(t, "_test_transfer_tx_2")
-	id1 := sql.NullInt64{
-		Int64: testAccount1.ID,
+	accountFromTest, _, _ := createRandomAccount(t, "_test_transfer_tx_1")
+	accountToTest, _, _ := createRandomAccount(t, "_test_transfer_tx_2")
+	fromId := sql.NullInt64{
+		Int64: accountFromTest.ID,
 		Valid: true,
 	}
-	id2 := sql.NullInt64{
-		Int64: testAccount2.ID,
+	toId := sql.NullInt64{
+		Int64: accountToTest.ID,
 		Valid: true,
 	}
 
@@ -92,10 +93,12 @@ func NoTestTransferTxConcurrent(t *testing.T) {
 	results := make(chan TransferTxResult)
 
 	for i := 0; i < n; i++ {
+		txName := fmt.Sprintf("tx %d", i)
 		go func() {
-			result, err := store.TransferTx(context.Background(), CreateTransferParams{
-				FromAccountID: id1,
-				ToAccountID:   id2,
+			ctx := context.WithValue(context.Background(), txKey, txName)
+			result, err := store.TransferTx(ctx, CreateTransferParams{
+				FromAccountID: fromId,
+				ToAccountID:   toId,
 				Amount:        amount,
 			})
 			errs <- err
@@ -107,7 +110,66 @@ func NoTestTransferTxConcurrent(t *testing.T) {
 	for i := 0; i < n; i++ {
 		err := <-errs
 		result := <-results
-		runTransferTxTests(t, err, &testAccount1, &testAccount2, result, amount, store)
-
+		runTransferTxTests(t, err, &accountFromTest, &accountToTest, result, amount, store)
 	}
+
+	// check final updated balances
+	dbAccountFrom, err := store.GetAccount(context.Background(), accountFromTest.ID)
+	require.NoError(t, err)
+	dbAccountTo, err := store.GetAccount(context.Background(), accountToTest.ID)
+	require.NoError(t, err)
+	require.Equal(t, accountFromTest.Balance-(amount*int64(n)), dbAccountFrom.Balance)
+	require.Equal(t, accountToTest.Balance+(amount*int64(n)), dbAccountTo.Balance)
+}
+
+func TestTransferTxConcurrentCrossAmounts(t *testing.T) {
+	store := NewStore(testDB)
+	account1, _, _ := createRandomAccount(t, "_test_transfer_tx_1")
+	account2, _, _ := createRandomAccount(t, "_test_transfer_tx_2")
+
+	// run n concurrent transfer transactions
+	n := 10
+	amount := int64(10)
+
+	errs := make(chan error)
+	results := make(chan TransferTxResult)
+
+	for i := 0; i < n; i++ {
+		fromId := sql.NullInt64{
+			Int64: account1.ID,
+			Valid: true,
+		}
+		toId := sql.NullInt64{
+			Int64: account2.ID,
+			Valid: true,
+		}
+		// half the transactions will switch the from and to accounts
+		if i >= 5 {
+			fromId.Int64 = account2.ID
+			toId.Int64 = account1.ID
+		}
+		go func() {
+			result, err := store.TransferTx(context.Background(), CreateTransferParams{
+				FromAccountID: fromId,
+				ToAccountID:   toId,
+				Amount:        amount,
+			})
+			errs <- err
+			results <- result
+		}()
+	}
+
+	// check results
+	for i := 0; i < n; i++ {
+		err := <-errs
+		require.NoError(t, err)
+	}
+
+	// check final updated balances
+	dbAccount1, err := store.GetAccount(context.Background(), account1.ID)
+	require.NoError(t, err)
+	dbAccount2, err := store.GetAccount(context.Background(), account2.ID)
+	require.NoError(t, err)
+	require.Equal(t, account1.Balance, dbAccount1.Balance)
+	require.Equal(t, account2.Balance, dbAccount2.Balance)
 }
