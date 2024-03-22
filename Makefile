@@ -10,7 +10,7 @@ createdb:
 dropdb:
 	docker exec -it go-backend-postgres dropdb --username=root simple_bank
 
-migrate:
+migrate_up:
 	migrate -path db/migration -database "postgresql://root:secret@localhost:54321/simple_bank?sslmode=disable" --verbose up
 
 generate_sql:
