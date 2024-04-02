@@ -40,7 +40,7 @@ jobs:
     
     - name: Initialize Go module
       run: |
-        go mod init github.com/go_backed_misc
+        go mod init github.com/go_backend_misc
         go get github.com/lib/pq
         go mod tidy
 
