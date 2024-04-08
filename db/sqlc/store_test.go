@@ -16,7 +16,7 @@ func runTransferTxTests(
 	toAccount *Account,
 	transferResult TransferTxResult,
 	amount int64,
-	store *Store,
+	store Store,
 ) {
 	require.NoError(t, err)
 

@@ -25,4 +25,7 @@ server:
 test:
 	go test -v -cover ./...
 
-PHONY: test server
+mock_store:
+	mockgen -package mockdb -destination db/mock/store.go github.com/go_backend_misc/db/sqlc Store
+
+PHONY: test server mock_store

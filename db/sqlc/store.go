@@ -6,14 +6,20 @@ import (
 	"fmt"
 )
 
-type Store struct {
-	// composition: Store embeds Queries (in Go, vs inheritance)
+type Store interface {
+	// interface composition: Store embeds Querier (in Go, vs inheritance)
+	Querier
+	TransferTx(ctx context.Context, arg CreateTransferParams) (result TransferTxResult, err error)
+}
+
+type SQLStore struct {
+	// struct composition: SQLStore embeds Queries (in Go, vs inheritance)
 	*Queries
 	db *sql.DB
 }
 
-func NewStore(db *sql.DB) *Store {
-	return &Store{
+func NewStore(db *sql.DB) Store {
+	return &SQLStore{
 		Queries: New(db),
 		db:      db,
 	}
@@ -21,7 +27,7 @@ func NewStore(db *sql.DB) *Store {
 
 // execTx runs a function within a database transaction
 // This function is unexported (lowercase), so it can only be called from within the db package
-func (store *Store) executeTransaction(ctx context.Context, innerFunction func(*Queries) error) error {
+func (store *SQLStore) executeTransaction(ctx context.Context, innerFunction func(*Queries) error) error {
 	transaction, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -55,7 +61,7 @@ var txKey = struct{}{}
 
 // TransferTx performs a money transfer from one account to the other
 // It creates a transfer record, add account entries, and update accounts' balance within a single database transaction
-func (store *Store) TransferTx(ctx context.Context, arg CreateTransferParams) (result TransferTxResult, err error) {
+func (store *SQLStore) TransferTx(ctx context.Context, arg CreateTransferParams) (result TransferTxResult, err error) {
 	txErr := store.executeTransaction(ctx, func(queries *Queries) error {
 		// used for debugging: txName := ctx.Value(txKey)
 		result.Transfer, err = queries.CreateTransfer(ctx, CreateTransferParams{
