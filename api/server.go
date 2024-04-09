@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 
 	db "github.com/go_backend_misc/db/sqlc"
 )
@@ -20,6 +22,10 @@ type ServerStatus struct {
 func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	router := gin.Default()
+
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("currency", validCurrency)
+	}
 
 	router.GET("/status", server.status)
 
@@ -40,6 +46,10 @@ func (server *Server) Start(address string) error {
 
 func errorResponse(err error) gin.H {
 	return gin.H{"error": err.Error()}
+}
+
+func errorMessageResponse(message string) gin.H {
+	return gin.H{"error": message}
 }
 
 func (server *Server) status(ginCtx *gin.Context) {

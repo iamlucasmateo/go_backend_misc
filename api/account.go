@@ -6,11 +6,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	db "github.com/go_backend_misc/db/sqlc"
+	"github.com/lib/pq"
 )
 
 type createAccountRequest struct {
 	Owner    string `json:"owner" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR"`
+	Currency string `json:"currency" binding:"required,currency"`
 }
 
 func (server *Server) createAccount(ginCtx *gin.Context) {
@@ -28,6 +29,19 @@ func (server *Server) createAccount(ginCtx *gin.Context) {
 
 	account, err := server.store.CreateAccount(ginCtx, arg)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			// Find the name of the error: log.Println(pqErr.Code.Name())
+			switch pqErr.Code.Name() {
+			case "foreign_key_violation":
+				msg := "Owner does not exist"
+				ginCtx.JSON(http.StatusConflict, errorMessageResponse(msg))
+				return
+			case "unique_violation":
+				msg := "Account with that owner and currency already exists"
+				ginCtx.JSON(http.StatusConflict, errorMessageResponse(msg))
+				return
+			}
+		}
 		ginCtx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}

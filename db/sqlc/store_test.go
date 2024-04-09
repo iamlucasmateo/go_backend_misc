@@ -45,8 +45,8 @@ func runTransferTxTests(
 
 func TestTransferTx(t *testing.T) {
 	store := NewStore(testDB)
-	fromAccountTest, _, _ := createRandomAccount(t, "_test_transfer_tx_1")
-	toAccountTest, _, _ := createRandomAccount(t, "_test_transfer_tx_2")
+	fromAccountTest, _, _, _ := createRandomAccount("_test_transfer_tx_1")
+	toAccountTest, _, _, _ := createRandomAccount("_test_transfer_tx_2")
 	fromId := sql.NullInt64{
 		Int64: fromAccountTest.ID,
 		Valid: true,
@@ -74,8 +74,8 @@ func TestTransferTx(t *testing.T) {
 
 func TestTransferTxConcurrent(t *testing.T) {
 	store := NewStore(testDB)
-	accountFromTest, _, _ := createRandomAccount(t, "_test_transfer_tx_1")
-	accountToTest, _, _ := createRandomAccount(t, "_test_transfer_tx_2")
+	accountFromTest, _, _, _ := createRandomAccount("_test_transfer_tx_1")
+	accountToTest, _, _, _ := createRandomAccount("_test_transfer_tx_2")
 	fromId := sql.NullInt64{
 		Int64: accountFromTest.ID,
 		Valid: true,
@@ -124,8 +124,8 @@ func TestTransferTxConcurrent(t *testing.T) {
 
 func TestTransferTxConcurrentCrossAmounts(t *testing.T) {
 	store := NewStore(testDB)
-	account1, _, _ := createRandomAccount(t, "_test_transfer_tx_1")
-	account2, _, _ := createRandomAccount(t, "_test_transfer_tx_2")
+	account1, _, _, _ := createRandomAccount("_test_transfer_tx_1")
+	account2, _, _, _ := createRandomAccount("_test_transfer_tx_2")
 
 	// run n concurrent transfer transactions
 	n := 10

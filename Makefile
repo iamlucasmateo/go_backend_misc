@@ -13,11 +13,17 @@ dropdb:
 migrate_up:
 	migrate -path db/migration -database "postgresql://root:secret@localhost:54321/simple_bank?sslmode=disable" --verbose up
 
+migrate_up1:
+	migrate -path db/migration -database "postgresql://root:secret@localhost:54321/simple_bank?sslmode=disable" --verbose up 1
+
 generate_sql:
 	sqlc generate
 
 migrate_down:
 	migrate -path db/migration -database "postgresql://root:secret@localhost:54321/simple_bank?sslmode=disable" --verbose down
+
+migrate_down1:
+	migrate -path db/migration -database "postgresql://root:secret@localhost:54321/simple_bank?sslmode=disable" --verbose down 1
 
 server:
 	go run main.go

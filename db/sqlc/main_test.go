@@ -13,6 +13,7 @@ import (
 
 var testQueries *Queries
 var testDB *sql.DB
+var testUser User
 
 func TestMain(m *testing.M) {
 	config, err := util.LoadConfig("../..")
@@ -25,6 +26,9 @@ func TestMain(m *testing.M) {
 	}
 
 	testQueries = New(testDB)
+
+	// to reuse a user
+	// testUser, _, _ = createRandomUser("_test_create_account")
 
 	os.Exit(m.Run())
 }
