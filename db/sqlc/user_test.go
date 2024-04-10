@@ -10,9 +10,14 @@ import (
 
 func createRandomUser(userSuffix string) (User, CreateUserParams, error) {
 	username := util.RandomString(7) + userSuffix
+	password := util.RandomString(10)
+	hashedPassword, err := util.HashPassword(password)
+	if err != nil {
+		return User{}, CreateUserParams{}, err
+	}
 	arg := CreateUserParams{
 		Username:       username,
-		HashedPassword: util.RandomString(10),
+		HashedPassword: hashedPassword,
 		FullName:       util.RandomString(10) + " " + util.RandomString(10),
 		Email:          util.RandomEmail(username),
 	}
