@@ -79,7 +79,7 @@ func TestCreateUserAPI(t *testing.T) {
 					Return(user, nil)
 			},
 			checkResponse: func(recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, recorder.Code)
+				require.Equal(t, http.StatusCreated, recorder.Code)
 				requireBodyMatchUser(t, recorder.Body, user)
 			},
 		},
@@ -145,7 +145,7 @@ func TestCreateUserAPI(t *testing.T) {
 			store := mockdb.NewMockStore(ctrl)
 			testCase.buildStubs(store)
 
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			data, err := json.Marshal(testCase.body)
