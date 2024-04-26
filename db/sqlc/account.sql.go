@@ -150,6 +150,49 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]A
 	return items, nil
 }
 
+const listAccountsByUsername = `-- name: ListAccountsByUsername :many
+SELECT id, owner, balance, currency, created_at FROM accounts
+WHERE owner = $1
+ORDER BY id
+LIMIT $2
+OFFSET $3
+`
+
+type ListAccountsByUsernameParams struct {
+	Owner  string `json:"owner"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+}
+
+func (q *Queries) ListAccountsByUsername(ctx context.Context, arg ListAccountsByUsernameParams) ([]Account, error) {
+	rows, err := q.db.QueryContext(ctx, listAccountsByUsername, arg.Owner, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Account
+	for rows.Next() {
+		var i Account
+		if err := rows.Scan(
+			&i.ID,
+			&i.Owner,
+			&i.Balance,
+			&i.Currency,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateAccount = `-- name: UpdateAccount :one
 UPDATE accounts
 SET balance = $2

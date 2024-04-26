@@ -101,3 +101,26 @@ func TestListAccounts(t *testing.T) {
 		require.NotEmpty(t, account)
 	}
 }
+
+func TestListAccountsByUsername(t *testing.T) {
+	var lastUser User
+	for i := 0; i < 3; i++ {
+		userSuffix := "_test_list_accounts_" + fmt.Sprintf("%v", i)
+		_, lastUser, _, _ = createRandomAccount(userSuffix)
+	}
+
+	arg := ListAccountsByUsernameParams{
+		Owner:  lastUser.Username,
+		Limit:  5,
+		Offset: 0,
+	}
+
+	accounts, err := testQueries.ListAccountsByUsername(context.Background(), arg)
+	require.NoError(t, err)
+	require.Equal(t, len(accounts), 1)
+
+	for _, account := range accounts {
+		require.NotEmpty(t, account)
+		require.Equal(t, accounts[0].Owner, lastUser.Username)
+	}
+}

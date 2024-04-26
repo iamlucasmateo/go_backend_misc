@@ -27,7 +27,7 @@ type ServerStatus struct {
 func NewServer(config util.Config, store db.Store) (*Server, error) {
 	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot create token maker: %w", err)
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
 	server := &Server{
 		config:     config,
@@ -48,15 +48,16 @@ func (server *Server) setupRouter() {
 	router := gin.Default()
 
 	router.GET("/status", server.status)
-
-	router.POST("/account", server.createAccount)
-	router.GET("/account/:id", server.getAccount)
-	router.GET("/accounts/", server.listAccounts)
-
-	router.POST("/transfer", server.createTransfer)
-
 	router.POST("/user", server.createUser)
 	router.POST("/user/login", server.loginUser)
+
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+
+	authRoutes.POST("/account", server.createAccount)
+	authRoutes.GET("/account/:id", server.getAccount)
+	authRoutes.GET("/accounts/", server.listAccounts)
+
+	authRoutes.POST("/transfer", server.createTransfer)
 
 	server.router = router
 }

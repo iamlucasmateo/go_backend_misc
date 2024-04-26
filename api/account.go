@@ -2,15 +2,16 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/go_backend_misc/db/sqlc"
+	"github.com/go_backend_misc/token"
 	"github.com/lib/pq"
 )
 
 type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 
@@ -21,8 +22,9 @@ func (server *Server) createAccount(ginCtx *gin.Context) {
 		return
 	}
 
+	authPayload := ginCtx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    authPayload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -71,6 +73,12 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if account.Owner != authPayload.Username {
+		err := errors.New("account doesn't belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
 	ctx.JSON(http.StatusOK, account)
 
 }
@@ -87,8 +95,13 @@ func (server *Server) listAccounts(ctx *gin.Context) {
 		return
 	}
 
-	listAccountParams := db.ListAccountsParams{Limit: req.PageSize, Offset: req.Offset}
-	accounts, err := server.store.ListAccounts(ctx, listAccountParams)
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	listAccountParams := db.ListAccountsByUsernameParams{
+		Owner:  authPayload.Username,
+		Limit:  req.PageSize,
+		Offset: req.Offset,
+	}
+	accounts, err := server.store.ListAccountsByUsername(ctx, listAccountParams)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))

@@ -2,10 +2,12 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/go_backend_misc/db/sqlc"
+	"github.com/go_backend_misc/token"
 )
 
 type transferRequest struct {
@@ -22,11 +24,18 @@ func (server *Server) createTransfer(ginCtx *gin.Context) {
 		return
 	}
 
-	if !server.validAccount(ginCtx, req.FromAccountID, req.Currency) {
+	fromAccount, isValid := server.validAccount(ginCtx, req.FromAccountID, req.Currency)
+	if !isValid {
 		return
 	}
 
-	if !server.validAccount(ginCtx, req.ToAccountID, req.Currency) {
+	if _, isValid := server.validAccount(ginCtx, req.ToAccountID, req.Currency); !isValid {
+		return
+	}
+
+	authPayload := ginCtx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if fromAccount.Owner != authPayload.Username {
+		ginCtx.JSON(http.StatusUnauthorized, errorResponse(errors.New("unauthorized user")))
 		return
 	}
 
@@ -46,22 +55,22 @@ func (server *Server) createTransfer(ginCtx *gin.Context) {
 
 }
 
-func (server *Server) validAccount(ctx *gin.Context, accountID int64, currency string) bool {
+func (server *Server) validAccount(ctx *gin.Context, accountID int64, currency string) (account db.Account, isValid bool) {
 	account, err := server.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return false
+			return account, false
 		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return false
+		return account, false
 	}
 
 	if account.Currency != currency {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "account currency mismatch"})
-		return false
+		return account, false
 	}
 
-	return true
+	return account, true
 
 }

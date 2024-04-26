@@ -22,3 +22,6 @@ go.work
 
 # Mac
 .DS_Store
+
+# gomock
+gomock_reflect_*/*
