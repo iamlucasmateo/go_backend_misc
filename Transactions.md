@@ -64,10 +64,10 @@ Deadlock may come from an INSERT query with a foreign key constraint, concurrent
 ## Read phenomena -> Transaction isolation level
 
 - Dirty read -> read-uncommitted
-- Phanton read -> read-committed
+- Phantom read -> read-committed
 - Non-repeatable read -> repeatable-read
 - Serialization anomaly -> serializable
 
 ## Postgres vs MySQL
 - Each DB uses different isolation levels by default
-- Postgres uses a depedency mechanism, while MySQL uses a lock
+- Postgres uses a dependency mechanism, while MySQL uses a lock
